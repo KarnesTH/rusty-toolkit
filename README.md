@@ -32,18 +32,5 @@ rusty-toolkit download
 rusty-toolkit system-monitor
 ```
 
-## Dependencies
-- clap
-- tokio
-- serde
-- ring
-- chrono
-
-## Contributing
-1. Fork repository
-2. Create feature branch
-3. Commit changes
-4. Push and create PR
-
 ## License
 MIT License
