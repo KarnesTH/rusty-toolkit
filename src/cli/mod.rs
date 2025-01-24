@@ -1,7 +1,9 @@
 use clap::Parser;
 pub use commands::Commands;
+pub use file_search::FileSearch;
 
 mod commands;
+mod file_search;
 
 #[derive(Parser, Debug)]
 #[clap(
