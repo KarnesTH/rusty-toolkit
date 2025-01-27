@@ -1,4 +1,4 @@
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressStyle};
 use inquire::Text;
 use std::path::PathBuf;
 
@@ -34,18 +34,23 @@ impl FileSearch {
             Text::new("Enter the name of the file to search for:").prompt()?
         };
 
-        let progress = ProgressBar::new(0);
-        let founded_files = self.search(path, &name, progress.clone())?;
-        progress.set_length(founded_files);
-        for file in self.result.iter() {
-            progress.println(file);
+        let progress = ProgressBar::new_spinner();
+        progress.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} Searching... Found: {pos} files")?,
+        );
+
+        self.search(path, &name, progress.clone())?;
+
+        progress.finish_with_message(format!("Found {} files:", self.result.len()));
+        for file in &self.result {
+            println!("  • {}", file);
         }
-        progress.finish();
 
         Ok(())
     }
 
-    pub fn search(
+    fn search(
         &mut self,
         path: String,
         name: &String,
@@ -54,13 +59,14 @@ impl FileSearch {
         for entry in PathBuf::from(path).read_dir()? {
             let entry = entry?;
             let path = entry.path();
-            let file_name = path.file_name().unwrap().to_str().unwrap();
 
-            if path.is_dir() {
-                self.search(path.to_str().unwrap().to_string(), name, progress.clone())?;
-            } else if file_name.contains(name) {
-                self.result.push(path.to_str().unwrap().to_string());
-                progress.inc(1);
+            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                if path.is_dir() {
+                    self.search(path.to_string_lossy().to_string(), name, progress.clone())?;
+                } else if file_name.contains(name) {
+                    self.result.push(path.to_string_lossy().to_string());
+                    progress.inc(1);
+                }
             }
         }
 
