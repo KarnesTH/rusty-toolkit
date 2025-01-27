@@ -1,3 +1,4 @@
+use crate::utils::errors::FileSearchError;
 use indicatif::{ProgressBar, ProgressStyle};
 use inquire::Text;
 use std::path::PathBuf;
@@ -20,10 +21,7 @@ impl FileSearch {
     /// # Returns
     ///
     /// A `Result` containing the new `FileSearch` instance or an error.
-    pub fn new(
-        path: Option<String>,
-        name: Option<String>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(path: Option<String>, name: Option<String>) -> Result<Self, FileSearchError> {
         Ok(Self {
             path,
             name,
@@ -40,7 +38,7 @@ impl FileSearch {
     /// # Errors
     ///
     /// This method will return an error if the user input fails.
-    pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(&mut self) -> Result<(), FileSearchError> {
         let path = if let Some(path) = self.path.clone() {
             path
         } else {
@@ -89,7 +87,14 @@ impl FileSearch {
         path: String,
         name: &String,
         progress: ProgressBar,
-    ) -> Result<u64, Box<dyn std::error::Error>> {
+    ) -> Result<u64, FileSearchError> {
+        if !PathBuf::from(&path).exists() {
+            return Err(FileSearchError::SearchError(format!(
+                "Path does not exist: {}",
+                path
+            )));
+        }
+
         for entry in PathBuf::from(path).read_dir()? {
             let entry = entry?;
             let path = entry.path();
