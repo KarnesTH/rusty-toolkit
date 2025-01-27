@@ -1,6 +1,7 @@
 use crate::utils::errors::FileSearchError;
 use indicatif::{ProgressBar, ProgressStyle};
 use inquire::Text;
+use log::info;
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -40,14 +41,18 @@ impl FileSearch {
     /// This method will return an error if the user input fails.
     pub fn run(&mut self) -> Result<(), FileSearchError> {
         let path = if let Some(path) = self.path.clone() {
+            info!("Using provided path: {}", path);
             path
         } else {
+            info!("Request path from user");
             Text::new("Enter the path to search for files in:").prompt()?
         };
 
         let name = if let Some(name) = self.name.clone() {
+            info!("Using provided name: {}", name);
             name
         } else {
+            info!("Request name from user");
             Text::new("Enter the name of the file to search for:").prompt()?
         };
 
@@ -63,6 +68,8 @@ impl FileSearch {
         for file in &self.result {
             println!("  • {}", file);
         }
+
+        info!("Found {} files", self.result.len());
 
         Ok(())
     }
