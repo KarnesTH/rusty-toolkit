@@ -10,6 +10,16 @@ pub struct FileSearch {
 }
 
 impl FileSearch {
+    /// Create a new instance of the `FileSearch` struct.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - An optional `String` that represents the path to search for files in.
+    /// * `name` - An optional `String` that represents the name of the file to search for.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the new `FileSearch` instance or an error.
     pub fn new(
         path: Option<String>,
         name: Option<String>,
@@ -21,6 +31,15 @@ impl FileSearch {
         })
     }
 
+    /// Run the file search command.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if the user input fails.
     pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let path = if let Some(path) = self.path.clone() {
             path
@@ -50,6 +69,21 @@ impl FileSearch {
         Ok(())
     }
 
+    /// Search for files in a given path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - A `String` that represents the path to search for files in.
+    /// * `name` - A reference to a `String` that represents the name of the file to search for.
+    /// * `progress` - A `ProgressBar` instance to update the progress of the search.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the number of files found or an error.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if the search fails.
     fn search(
         &mut self,
         path: String,
@@ -71,5 +105,30 @@ impl FileSearch {
         }
 
         Ok(self.result.len() as u64)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let file_search = FileSearch::new(None, None).unwrap();
+        assert_eq!(file_search.path, None);
+        assert_eq!(file_search.name, None);
+        assert_eq!(file_search.result, Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_search() {
+        let mut file_search = FileSearch::new(None, None).unwrap();
+        assert!(file_search
+            .search(
+                ".".to_string(),
+                &String::from("Cargo"),
+                ProgressBar::new_spinner()
+            )
+            .is_ok());
     }
 }
