@@ -3,7 +3,8 @@ use log::info;
 use rusty_toolkit::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
+    let config = Config::load()?;
+    config.setup_logger()?;
 
     info!("Starting rusty-toolkit...");
     let cli = Cli::parse();
