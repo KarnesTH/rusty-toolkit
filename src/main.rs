@@ -18,6 +18,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut file_search = FileSearch::new(path, name)?;
             file_search.run()?;
         }
+        Commands::Password { subcommand } => match subcommand {
+            PasswordCommands::Generate { length } => {
+                info!("Generating password with length: {:?}", length);
+                if let Some(length) = length {
+                    println!("Generating password with length: {}", length);
+                    let password = PasswordManager::generate_password(length)?;
+                    println!("Generated password: {}", password);
+                }
+            }
+        },
     }
 
     Ok(())

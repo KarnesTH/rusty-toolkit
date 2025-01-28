@@ -1,9 +1,11 @@
 use clap::Parser;
-pub use commands::Commands;
+pub use commands::{Commands, PasswordCommands};
 pub use file_search::FileSearch;
+pub use password::PasswordManager;
 
 mod commands;
 mod file_search;
+mod password;
 
 #[derive(Parser, Debug)]
 #[clap(
