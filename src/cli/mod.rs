@@ -1,5 +1,5 @@
 use clap::Parser;
-pub use commands::{Commands, PasswordCommands};
+pub use commands::{Commands, PasswordCommands, PasswordManagerCommands};
 pub use file_search::FileSearch;
 pub use password::PasswordManager;
 

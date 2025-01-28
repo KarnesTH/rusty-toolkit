@@ -26,4 +26,30 @@ pub enum PasswordCommands {
         #[arg(short, long)]
         length: Option<usize>,
     },
+    /// Manage passwords in the password manager.
+    Manage {
+        #[command(subcommand)]
+        subcommand: PasswordManagerCommands,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PasswordManagerCommands {
+    /// Add a new password to the password manager.
+    Add {
+        /// The name of the password to add.
+        #[arg(short, long)]
+        name: String,
+        /// The password to add.
+        #[arg(short, long)]
+        password: String,
+    },
+    /// Remove a password from the password manager.
+    Remove {
+        /// The name of the password to remove.
+        #[arg(short, long)]
+        name: String,
+    },
+    /// List all passwords in the password manager.
+    List,
 }
