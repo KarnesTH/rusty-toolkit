@@ -21,11 +21,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Password { subcommand } => match subcommand {
             PasswordCommands::Generate { length } => {
                 info!("Generating password with length: {:?}", length);
-                if let Some(length) = length {
-                    println!("Generating password with length: {}", length);
-                    let password = PasswordManager::generate_password(length)?;
-                    println!("Generated password: {}", password);
-                }
+                let password = PasswordManager::generate_password(length)?;
+                println!("Generated password: {}", password);
+                info!("Generating Password successfully");
             }
         },
     }
