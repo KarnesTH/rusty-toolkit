@@ -56,6 +56,7 @@ impl Config {
             let default_config = Config::default();
             let config_str = toml::to_string_pretty(&default_config)?;
             std::fs::write(&config_path, &config_str)?;
+
             default_config
         };
 
@@ -137,6 +138,41 @@ impl Config {
             .init();
 
         Ok(())
+    }
+
+    /// Get the database path.
+    ///
+    /// If the database file does not exist, it will be created with the necessary schema.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the database path or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the database file cannot be opened or created.
+    pub fn get_db_path(&self) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let config_dir = Self::get_config_dir()?;
+        let db_path = config_dir.join(&self.database.db_name);
+
+        if !db_path.exists() {
+            let conn = rusqlite::Connection::open(&db_path)?;
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS passwords (
+                    id INTEGER PRIMARY KEY,
+                    service TEXT NOT NULL,
+                    username TEXT NOT NULL,
+                    password TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    notes TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )",
+                [],
+            )?;
+        }
+
+        Ok(db_path)
     }
 }
 
