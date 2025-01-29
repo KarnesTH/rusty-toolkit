@@ -72,7 +72,7 @@ impl Config {
     /// # Errors
     ///
     /// An error will be returned if the configuration directory cannot be found or created.
-    fn get_config_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    pub fn get_config_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
         let config_dir = dirs::config_dir().ok_or("Could not find config directory")?;
         let app_dir = config_dir.join("karnes-development/rusty-toolkit");
 
