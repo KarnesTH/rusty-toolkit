@@ -23,6 +23,15 @@ pub struct Database {
 }
 
 impl Database {
+    /// Create a new `Database` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the database file.
+    ///
+    /// # Returns
+    ///
+    /// A new `Database` instance.
     pub fn new(path: PathBuf) -> Self {
         let conn = Connection::open(&path).unwrap();
         Self {

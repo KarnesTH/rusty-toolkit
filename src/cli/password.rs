@@ -2,12 +2,13 @@ use inquire::{validator::Validation, Text};
 use log::info;
 use ring::rand::{SecureRandom, SystemRandom};
 
-use crate::prelude::Database;
+use crate::prelude::{Database, Encryption};
 
 #[derive(Debug)]
 pub struct PasswordManager {
     pub length: usize,
     pub database: Database,
+    pub encryption: Encryption,
 }
 
 impl PasswordManager {
