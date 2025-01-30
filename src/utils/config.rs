@@ -155,23 +155,6 @@ impl Config {
         let config_dir = Self::get_config_dir()?;
         let db_path = config_dir.join(&self.database.db_name);
 
-        if !db_path.exists() {
-            let conn = rusqlite::Connection::open(&db_path)?;
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS passwords (
-                    id INTEGER PRIMARY KEY,
-                    service TEXT NOT NULL,
-                    username TEXT NOT NULL,
-                    password TEXT NOT NULL,
-                    url TEXT NOT NULL,
-                    notes TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )",
-                [],
-            )?;
-        }
-
         Ok(db_path)
     }
 }

@@ -108,6 +108,28 @@ impl Encryption {
 
         String::from_utf8(plain_text.to_vec()).map_err(|_| ring::error::Unspecified)
     }
+
+    pub fn get_key(&self, master_password: &str) -> Result<String, Box<dyn std::error::Error>> {
+        let mut key_bytes = [0u8; 32];
+
+        pbkdf2::derive(
+            pbkdf2::PBKDF2_HMAC_SHA256,
+            NonZeroU32::new(100_000).unwrap(),
+            b"db_encryption",
+            master_password.as_bytes(),
+            &mut key_bytes,
+        );
+
+        let hex_string = key_bytes
+            .iter()
+            .fold(String::with_capacity(64), |mut acc, b| {
+                use std::fmt::Write;
+                write!(&mut acc, "{:02x}", b).expect("Writing to string failed");
+                acc
+            });
+
+        Ok(hex_string)
+    }
 }
 
 #[cfg(test)]

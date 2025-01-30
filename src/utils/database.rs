@@ -1,19 +1,21 @@
 use std::path::PathBuf;
 
-use chrono::{DateTime, Utc};
-use rusqlite::Connection;
+use chrono::Utc;
+use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PasswortEntry {
+use crate::prelude::Encryption;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PasswordEntry {
     pub id: i32,
     pub service: String,
     pub username: String,
     pub password: String,
     pub url: String,
     pub notes: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 #[derive(Debug)]
@@ -32,27 +34,253 @@ impl Database {
     /// # Returns
     ///
     /// A new `Database` instance.
-    pub fn new(path: PathBuf) -> Self {
-        let conn = Connection::open(&path).unwrap();
-        Self {
+    pub fn new(path: PathBuf, master_password: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let conn = Connection::open(&path)?;
+
+        let encryption = Encryption::new(master_password);
+        let key = encryption.get_key(master_password)?;
+        conn.execute_batch(&format!(
+            "
+                PRAGMA key = '{}';
+                PRAGMA cipher_page_size = 4096;
+                PRAGMA kdf_iter = 64000;
+                PRAGMA cipher_memory_security = ON;
+                PRAGMA foreign_keys = ON;
+                PRAGMA journal_mode = WAL;
+            ",
+            key
+        ))?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS passwords (
+                id INTEGER PRIMARY KEY,
+                service TEXT NOT NULL,
+                username TEXT NOT NULL,
+                password TEXT NOT NULL,
+                url TEXT NOT NULL,
+                notes TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        Ok(Self {
             connection: conn,
             path,
+        })
+    }
+
+    /// Create a new PasswordEntry in the database.
+    ///
+    /// # Arguments
+    ///
+    /// * `entry` - The PasswordEntry to create.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the new PasswordEntry or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the PasswordEntry cannot be created.
+    pub fn create(&self, entry: &PasswordEntry) -> Result<(), Box<dyn std::error::Error>> {
+        self.connection.execute(
+            "INSERT INTO passwords (service, username, password, url, notes, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                entry.service,
+                entry.username,
+                entry.password,
+                entry.url,
+                entry.notes,
+                Utc::now().to_rfc3339(),
+                Utc::now().to_rfc3339(),
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Read all PasswordEntries from the database.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `Vec` of PasswordEntries or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the PasswordEntries cannot be read.
+    pub fn read(&self) -> Result<Vec<PasswordEntry>, Box<dyn std::error::Error>> {
+        let mut stmt = self.connection.prepare(
+            "SELECT id, service, username, password, url, notes, created_at, updated_at
+            FROM passwords",
+        )?;
+
+        let entries = stmt.query_map([], |row| {
+            Ok(PasswordEntry {
+                id: row.get(0)?,
+                service: row.get(1)?,
+                username: row.get(2)?,
+                password: row.get(3)?,
+                url: row.get(4)?,
+                notes: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })?;
+
+        let mut result = Vec::new();
+        for entry in entries {
+            result.push(entry?);
         }
+
+        Ok(result)
     }
 
-    pub fn create(&self) -> Result<(), Box<dyn std::error::Error>> {
+    /// Update a PasswordEntry in the database.
+    ///
+    /// # Arguments
+    ///
+    /// * `entry` - The PasswordEntry to update.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the updated PasswordEntry or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the PasswordEntry cannot be updated.
+    pub fn update(&self, entry: PasswordEntry) -> Result<(), Box<dyn std::error::Error>> {
+        self.connection.execute(
+            "UPDATE passwords
+                SET service = ?1, username = ?2, password = ?3, url = ?4, notes = ?5, updated_at = ?6
+                WHERE id = ?7",
+            params![
+                entry.service,
+                entry.username,
+                entry.password,
+                entry.url,
+                entry.notes,
+                Utc::now().to_rfc3339(),
+                entry.id,
+            ],
+        )?;
         Ok(())
     }
 
-    pub fn read(&self) -> Result<Vec<PasswortEntry>, Box<dyn std::error::Error>> {
-        Ok(vec![])
-    }
-
-    pub fn update(&self, _entry: PasswortEntry) -> Result<(), Box<dyn std::error::Error>> {
+    /// Delete a PasswordEntry from the database.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The id of the PasswordEntry to delete.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the PasswordEntry cannot be deleted.
+    pub fn delete(&self, id: i32) -> Result<(), Box<dyn std::error::Error>> {
+        self.connection
+            .execute("DELETE FROM passwords WHERE id = ?1", params![id])?;
         Ok(())
     }
 
-    pub fn delete(&self, _id: i32) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
+    /// Search for PasswordEntries in the database.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - The search query.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `Vec` of PasswordEntries or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the PasswordEntries cannot be searched.
+    pub fn search(&self, query: &str) -> Result<Vec<PasswordEntry>, Box<dyn std::error::Error>> {
+        let mut stmt = self.connection.prepare(
+            "SELECT id, service, username, password, url, notes, created_at, updated_at
+            FROM passwords
+            WHERE service LIKE ?1 OR username LIKE ?1",
+        )?;
+
+        let search_pattern = format!("%{}%", query);
+        let entries = stmt.query_map(params![search_pattern], |row| {
+            Ok(PasswordEntry {
+                id: row.get(0)?,
+                service: row.get(1)?,
+                username: row.get(2)?,
+                password: row.get(3)?,
+                url: row.get(4)?,
+                notes: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })?;
+
+        Ok(entries.collect::<Result<Vec<_>, _>>()?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_db() -> Database {
+        let db = Database::new(PathBuf::from(":memory:"), "master_password").unwrap();
+
+        db.connection
+            .execute_batch(
+                "
+                    PRAGMA foreign_keys = ON;
+                    PRAGMA journal_mode = WAL;
+                ",
+            )
+            .unwrap();
+
+        db
+    }
+
+    #[test]
+    fn test_crud_operations() {
+        let db = create_test_db();
+        let entry = PasswordEntry {
+            id: 0,
+            service: "test_service".to_string(),
+            username: "test_user".to_string(),
+            password: "test_pass".to_string(),
+            url: "https://example.com".to_string(),
+            notes: "test notes".to_string(),
+            created_at: Utc::now().to_rfc3339(),
+            updated_at: Utc::now().to_rfc3339(),
+        };
+
+        // Test Create
+        assert!(db.create(&entry).is_ok());
+
+        // Test Read
+        let entries = db.read().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].service, entry.service);
+
+        // Test Update
+        let mut updated_entry = entries[0].clone();
+        updated_entry.service = "updated_service".to_string();
+        db.update(updated_entry).unwrap();
+
+        let updated_entries = db.read().unwrap();
+        assert_eq!(updated_entries[0].service, "updated_service");
+
+        // Test Search
+        let search_results = db.search("updated").unwrap();
+        assert_eq!(search_results.len(), 1);
+        assert_eq!(search_results[0].service, "updated_service");
+
+        // Test Delete
+        db.delete(updated_entries[0].id).unwrap();
+        let deleted_entries = db.read().unwrap();
+        assert_eq!(deleted_entries.len(), 0);
     }
 }

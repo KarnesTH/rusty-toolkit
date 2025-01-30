@@ -65,7 +65,7 @@ impl PasswordManager {
 
         Ok(Self {
             length: 16,
-            database: Database::new(config.get_db_path()?),
+            database: Database::new(config.get_db_path()?, master_password.as_str())?,
             encryption,
         })
     }
