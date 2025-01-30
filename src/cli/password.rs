@@ -266,15 +266,13 @@ impl PasswordManager {
 
         let password = if let Some(password) = password {
             password
+        } else if Confirm::new("Do you want to generate a password? (y/n)")
+            .with_default(true)
+            .prompt()?
+        {
+            Self::generate_password(Some(16))?
         } else {
-            if Confirm::new("Do you want to generate a password? (y/n)")
-                .with_default(true)
-                .prompt()?
-            {
-                Self::generate_password(Some(16))?
-            } else {
-                Password::new("Please enter the password:").prompt()?
-            }
+            Password::new("Please enter the password:").prompt()?
         };
 
         let url = if let Some(url) = url {
