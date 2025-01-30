@@ -25,22 +25,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Generated password: {}", password);
                 info!("Generating Password successfully");
             }
-            PasswordCommands::Manage { subcommand } => match subcommand {
-                PasswordManagerCommands::Add { name, password } => {
-                    println!("Password add functinality not implemented yet");
-                    info!("Add name: {}, with password: {}", name, password);
-                    todo!("Implement Password add functionality");
+            PasswordCommands::Manage { subcommand } => {
+                let pw = PasswordManager::new()?;
+
+                match subcommand {
+                    PasswordManagerCommands::Add {
+                        service,
+                        username,
+                        password,
+                        url,
+                        notes,
+                    } => {
+                        pw.add_password(service, username, password, url, notes)?;
+
+                        println!("New Password added.");
+                    }
+                    PasswordManagerCommands::Remove { name } => {
+                        println!("Password remove functinality not implemented yet");
+                        info!("Remove name: {}", name);
+                        todo!("Implement Password remove functionality");
+                    }
+                    PasswordManagerCommands::List => {
+                        println!("Password list functinality not implemented yet");
+                        todo!("Implement Password list functionality");
+                    }
                 }
-                PasswordManagerCommands::Remove { name } => {
-                    println!("Password remove functinality not implemented yet");
-                    info!("Remove name: {}", name);
-                    todo!("Implement Password remove functionality");
-                }
-                PasswordManagerCommands::List => {
-                    println!("Password list functinality not implemented yet");
-                    todo!("Implement Password list functionality");
-                }
-            },
+            }
         },
     }
 

@@ -109,6 +109,19 @@ impl Encryption {
         String::from_utf8(plain_text.to_vec()).map_err(|_| ring::error::Unspecified)
     }
 
+    /// Get the encryption key.
+    ///
+    /// # Arguments
+    ///
+    /// * `master_password` - The master password to use for encryption.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the encryption key as a `String`.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the key cannot be generated.
     pub fn get_key(&self, master_password: &str) -> Result<String, Box<dyn std::error::Error>> {
         let mut key_bytes = [0u8; 32];
 

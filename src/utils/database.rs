@@ -8,7 +8,7 @@ use crate::prelude::Encryption;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PasswordEntry {
-    pub id: i32,
+    pub id: Option<i32>,
     pub service: String,
     pub username: String,
     pub password: String,
@@ -224,6 +224,27 @@ impl Database {
     }
 }
 
+impl PasswordEntry {
+    pub fn new(
+        service: String,
+        username: String,
+        password: String,
+        url: String,
+        notes: String,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self {
+            id: None,
+            service,
+            username,
+            password,
+            url,
+            notes,
+            created_at: Utc::now().to_rfc3339(),
+            updated_at: Utc::now().to_rfc3339(),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -247,7 +268,7 @@ mod tests {
     fn test_crud_operations() {
         let db = create_test_db();
         let entry = PasswordEntry {
-            id: 0,
+            id: None,
             service: "test_service".to_string(),
             username: "test_user".to_string(),
             password: "test_pass".to_string(),
@@ -279,7 +300,8 @@ mod tests {
         assert_eq!(search_results[0].service, "updated_service");
 
         // Test Delete
-        db.delete(updated_entries[0].id).unwrap();
+        let id = updated_entries[0].id.unwrap();
+        db.delete(id).unwrap();
         let deleted_entries = db.read().unwrap();
         assert_eq!(deleted_entries.len(), 0);
     }

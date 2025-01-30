@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use inquire::{validator::Validation, Confirm, Password, Text};
 use log::info;
 use ring::rand::{SecureRandom, SystemRandom};
 
-use crate::prelude::{Config, Database, Encryption};
+use crate::prelude::{Config, Database, Encryption, PasswordEntry};
 
 #[derive(Debug)]
 pub struct PasswordManager {
@@ -35,6 +37,11 @@ impl PasswordManager {
             } else {
                 Password::new("Please enter your master password:").prompt()?
             };
+
+            println!(
+                "The master password is: {}. Please take it secure!",
+                password
+            );
 
             let encryption = Encryption::new(&password);
 
@@ -178,6 +185,90 @@ impl PasswordManager {
         } else {
             false
         }
+    }
+
+    pub fn add_password(
+        &self,
+        service: Option<String>,
+        username: Option<String>,
+        password: Option<String>,
+        url: Option<String>,
+        notes: Option<String>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let input_data = Self::get_user_data(service, username, password, url, notes)?;
+
+        let entry = PasswordEntry::new(
+            input_data["service"].clone(),
+            input_data["username"].clone(),
+            input_data["password"].clone(),
+            input_data["url"].clone(),
+            input_data["notes"].clone(),
+        )?;
+
+        self.database.create(&entry)?;
+
+        Ok(())
+    }
+
+    fn get_user_data(
+        service: Option<String>,
+        username: Option<String>,
+        password: Option<String>,
+        url: Option<String>,
+        notes: Option<String>,
+    ) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
+        let mut input = HashMap::new();
+        let service = if let Some(service) = service {
+            service
+        } else {
+            Text::new("Please enter the service name:").prompt()?
+        };
+
+        let username = if let Some(username) = username {
+            username
+        } else {
+            Text::new("Please enter the username:").prompt()?
+        };
+
+        let password = if let Some(password) = password {
+            password
+        } else {
+            if Confirm::new("Do you want to generate a password? (y/n)")
+                .with_default(true)
+                .prompt()?
+            {
+                Self::generate_password(Some(16))?
+            } else {
+                Password::new("Please enter the password:").prompt()?
+            }
+        };
+
+        let url = if let Some(url) = url {
+            url
+        } else {
+            Text::new("Please enter the URL:").prompt()?
+        };
+
+        let notes = if Confirm::new("Do you want to add notes? (y/n)")
+            .with_default(false)
+            .prompt()?
+        {
+            if let Some(notes) = notes {
+                notes
+            } else {
+                Text::new("Please enter the notes:").prompt()?
+            }
+        } else {
+            "".to_string()
+        };
+
+        input.insert("service".to_string(), service);
+        input.insert("username".to_string(), username);
+        input.insert("password".to_string(), password);
+        input.insert("url".to_string(), url);
+        input.insert("notes".to_string(), notes);
+
+        Ok(input)
     }
 }
 

@@ -37,12 +37,21 @@ pub enum PasswordCommands {
 pub enum PasswordManagerCommands {
     /// Add a new password to the password manager.
     Add {
+        /// The name of the service the password is for.
+        #[arg(short, long)]
+        service: Option<String>,
         /// The name of the password to add.
         #[arg(short, long)]
-        name: String,
+        username: Option<String>,
         /// The password to add.
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
+        /// The URL for the service.
+        #[arg(short, long)]
+        url: Option<String>,
+        /// Additional notes about the password.
+        #[arg(short, long)]
+        notes: Option<String>,
     },
     /// Remove a password from the password manager.
     Remove {
