@@ -187,6 +187,23 @@ impl PasswordManager {
         }
     }
 
+    /// Add a new password to the password manager.
+    ///
+    /// # Arguments
+    ///
+    /// * `service` - The name of the service the password is for.
+    /// * `username` - The name of the password to add.
+    /// * `password` - The password to add.
+    /// * `url` - The URL for the service.
+    /// * `notes` - Additional notes about the password.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the password cannot be added.
     pub fn add_password(
         &self,
         service: Option<String>,
@@ -210,6 +227,23 @@ impl PasswordManager {
         Ok(())
     }
 
+    /// Get user input for the password manager.
+    ///
+    /// # Arguments
+    ///
+    /// * `service` - The name of the service the password is for.
+    /// * `username` - The name of the password to add.
+    /// * `password` - The password to add.
+    /// * `url` - The URL for the service.
+    /// * `notes` - Additional notes about the password.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `HashMap` of the user input or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the user input cannot be retrieved.
     fn get_user_data(
         service: Option<String>,
         username: Option<String>,

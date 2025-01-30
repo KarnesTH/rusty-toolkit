@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 use chrono::Utc;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
@@ -22,6 +24,7 @@ pub struct PasswordEntry {
 pub struct Database {
     pub connection: Connection,
     pub path: PathBuf,
+    pub encryption: Encryption,
 }
 
 impl Database {
@@ -68,6 +71,7 @@ impl Database {
         Ok(Self {
             connection: conn,
             path,
+            encryption,
         })
     }
 
@@ -85,12 +89,15 @@ impl Database {
     ///
     /// An error will be returned if the PasswordEntry cannot be created.
     pub fn create(&self, entry: &PasswordEntry) -> Result<(), Box<dyn std::error::Error>> {
+        let encrypted_password = self.encryption.encrypt(&entry.password).unwrap();
+        let encoded_password = STANDARD.encode(encrypted_password);
+
         self.connection.execute(
             "INSERT INTO passwords (service, username, password, url, notes, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 entry.service,
                 entry.username,
-                entry.password,
+                encoded_password,
                 entry.url,
                 entry.notes,
                 Utc::now().to_rfc3339(),
@@ -116,11 +123,15 @@ impl Database {
         )?;
 
         let entries = stmt.query_map([], |row| {
+            let encoded_password: String = row.get(3)?;
+            let d_password = STANDARD.decode(encoded_password).unwrap();
+            let password = self.encryption.decrypt(&d_password).unwrap();
+
             Ok(PasswordEntry {
                 id: row.get(0)?,
                 service: row.get(1)?,
                 username: row.get(2)?,
-                password: row.get(3)?,
+                password,
                 url: row.get(4)?,
                 notes: row.get(5)?,
                 created_at: row.get(6)?,
@@ -150,6 +161,9 @@ impl Database {
     ///
     /// An error will be returned if the PasswordEntry cannot be updated.
     pub fn update(&self, entry: PasswordEntry) -> Result<(), Box<dyn std::error::Error>> {
+        let encrypted_password = self.encryption.encrypt(&entry.password).unwrap();
+        let encoded_password = STANDARD.encode(encrypted_password);
+
         self.connection.execute(
             "UPDATE passwords
                 SET service = ?1, username = ?2, password = ?3, url = ?4, notes = ?5, updated_at = ?6
@@ -157,7 +171,7 @@ impl Database {
             params![
                 entry.service,
                 entry.username,
-                entry.password,
+                encoded_password,
                 entry.url,
                 entry.notes,
                 Utc::now().to_rfc3339(),
