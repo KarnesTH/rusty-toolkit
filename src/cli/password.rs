@@ -339,6 +339,35 @@ impl PasswordManager {
 
         Ok(())
     }
+
+    /// Remove a password from the password manager.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the password to remove.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the password cannot be removed.
+    pub fn remove_password(&self, id: Option<i32>) -> Result<(), Box<dyn std::error::Error>> {
+        let id = if let Some(id) = id {
+            id
+        } else {
+            let id = Text::new("Please enter the ID of the password to remove:").prompt()?;
+            if let Ok(id) = id.parse::<i32>() {
+                id
+            } else {
+                return Err("Invalid ID".into());
+            }
+        };
+
+        self.database.delete(id)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

@@ -41,9 +41,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("New Password added.");
                     }
                     PasswordManagerCommands::Remove { id } => {
-                        println!("Password remove functinality not implemented yet");
-                        info!("Removed with id: {}", id.unwrap());
-                        todo!("Implement Password remove functionality");
+                        pw.remove_password(id)?;
+
+                        println!("Password removed.");
                     }
                     PasswordManagerCommands::List => {
                         pw.list_passwords()?;
