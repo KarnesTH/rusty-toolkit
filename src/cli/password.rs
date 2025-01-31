@@ -28,8 +28,12 @@ impl PasswordManager {
         let config_dir = Config::get_config_dir()?;
         let master_file = config_dir.join("master.key");
 
-        let master_password = if !master_file.exists() {
-            let password = if Confirm::new("Do you want to generate a password? (y/n)")
+        let (salt, master_password) = if !master_file.exists() {
+            let rng = SystemRandom::new();
+            let mut salt = [0u8; 16];
+            rng.fill(&mut salt).unwrap();
+
+            let password = if Confirm::new("Do you want to generate a password? ")
                 .with_default(true)
                 .prompt()?
             {
@@ -43,21 +47,27 @@ impl PasswordManager {
                 password
             );
 
-            let encryption = Encryption::new(&password);
-
+            let encryption = Encryption::new(&password, &salt);
             let verification_data = encryption.encrypt(&password).unwrap();
-            std::fs::write(&master_file, verification_data)?;
 
-            password
+            let mut file_content = Vec::new();
+            file_content.extend_from_slice(&salt);
+            file_content.extend_from_slice(&verification_data);
+            std::fs::write(&master_file, file_content)?;
+
+            (salt, password)
         } else {
+            let file_content = std::fs::read(&master_file)?;
+            let salt: [u8; 16] = file_content[..16].try_into()?;
+            let verification_data = &file_content[16..];
+
             let password = Password::new("Please enter your master password:")
                 .without_confirmation()
                 .prompt()?;
 
-            let encryption = Encryption::new(&password);
-            let verification_data = std::fs::read(&master_file)?;
+            let encryption = Encryption::new(&password, &salt);
 
-            if let Ok(decrypted) = encryption.decrypt(&verification_data) {
+            if let Ok(decrypted) = encryption.decrypt(verification_data) {
                 if decrypted != password {
                     return Err("Invalid master password".into());
                 }
@@ -65,17 +75,16 @@ impl PasswordManager {
                 return Err("Invalid master password".into());
             }
 
-            password
+            (salt, password)
         };
-
-        let encryption = Encryption::new(&master_password);
 
         Ok(Self {
             length: 16,
-            database: Database::new(config.get_db_path()?, master_password.as_str())?,
-            encryption,
+            database: Database::new(config.get_db_path()?, &master_password, &salt)?,
+            encryption: Encryption::new(&master_password, &salt),
         })
     }
+
     /// Generate a new password.
     ///
     /// # Arguments
@@ -301,6 +310,34 @@ impl PasswordManager {
         input.insert("notes".to_string(), notes);
 
         Ok(input)
+    }
+
+    /// List all passwords in the password manager.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the passwords cannot be listed.
+    pub fn list_passwords(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let passwords = self.database.read()?;
+
+        if passwords.is_empty() {
+            println!("No passwords found.");
+            return Ok(());
+        }
+
+        println!("ID\tService\tUsername\tURL\tNotes");
+        for password in passwords {
+            println!(
+                "{:?}\t{}\t{}\t{}\t{}",
+                password.id, password.service, password.username, password.url, password.notes
+            );
+        }
+
+        Ok(())
     }
 }
 

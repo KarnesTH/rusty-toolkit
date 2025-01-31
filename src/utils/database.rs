@@ -37,10 +37,14 @@ impl Database {
     /// # Returns
     ///
     /// A new `Database` instance.
-    pub fn new(path: PathBuf, master_password: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        path: PathBuf,
+        master_password: &str,
+        salt: &[u8; 16],
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let conn = Connection::open(&path)?;
 
-        let encryption = Encryption::new(master_password);
+        let encryption = Encryption::new(master_password, salt);
         let key = encryption.get_key(master_password)?;
         conn.execute_batch(&format!(
             "
@@ -261,16 +265,41 @@ impl PasswordEntry {
 
 #[cfg(test)]
 mod tests {
+    use ring::rand::{SecureRandom, SystemRandom};
+
     use super::*;
+    use crate::prelude::Encryption;
+
+    fn create_test_encryption() -> Encryption {
+        let mut salt = [0u8; 16];
+        let rng = SystemRandom::new();
+        rng.fill(&mut salt).unwrap();
+        Encryption::new("test_password", &salt)
+    }
 
     fn create_test_db() -> Database {
-        let db = Database::new(PathBuf::from(":memory:"), "master_password").unwrap();
+        let encryption = create_test_encryption();
+        let db = Database {
+            connection: Connection::open(":memory:").unwrap(),
+            path: PathBuf::from(":memory:"),
+            encryption,
+        };
 
         db.connection
             .execute_batch(
                 "
                     PRAGMA foreign_keys = ON;
                     PRAGMA journal_mode = WAL;
+                    CREATE TABLE IF NOT EXISTS passwords (
+                        id INTEGER PRIMARY KEY,
+                        service TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        password TEXT NOT NULL,
+                        url TEXT NOT NULL,
+                        notes TEXT NOT NULL,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL
+                    );
                 ",
             )
             .unwrap();
@@ -299,6 +328,7 @@ mod tests {
         let entries = db.read().unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].service, entry.service);
+        assert_eq!(entries[0].password, entry.password); // Verify decryption works
 
         // Test Update
         let mut updated_entry = entries[0].clone();

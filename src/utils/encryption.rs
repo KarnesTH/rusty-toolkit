@@ -25,16 +25,12 @@ impl Encryption {
     /// # Panics
     ///
     /// Panics if the key cannot be created.
-    pub fn new(master_password: &str) -> Self {
-        let rng = SystemRandom::new();
-        let mut salt = [0u8; 16];
-        rng.fill(&mut salt).expect("RNG failed");
-
+    pub fn new(master_password: &str, salt: &[u8; 16]) -> Self {
         let mut key = [0u8; 32];
         pbkdf2::derive(
             pbkdf2::PBKDF2_HMAC_SHA256,
             NonZeroU32::new(100_000).unwrap(),
-            &salt,
+            salt,
             master_password.as_bytes(),
             &mut key,
         );
@@ -149,12 +145,20 @@ impl Encryption {
 mod tests {
     use super::*;
 
+    fn create_test_salt() -> [u8; 16] {
+        let mut salt = [0u8; 16];
+        let rng = SystemRandom::new();
+        rng.fill(&mut salt).unwrap();
+        salt
+    }
+
     #[test]
     fn test_encrypt_decrypt() {
         let master_password = "password";
         let data = "data";
+        let salt = create_test_salt();
 
-        let encryption = Encryption::new(master_password);
+        let encryption = Encryption::new(master_password, &salt);
         let encrypted_data = encryption.encrypt(data).unwrap();
         let decrypted_data = encryption.decrypt(&encrypted_data).unwrap();
 
@@ -163,7 +167,8 @@ mod tests {
 
     #[test]
     fn test_decrypt_invalid_data() {
-        let encryption = Encryption::new("password");
+        let salt = create_test_salt();
+        let encryption = Encryption::new("password", &salt);
         let result = encryption.decrypt(&[0u8; 8]);
         assert!(result.is_err());
     }
@@ -171,8 +176,24 @@ mod tests {
     #[test]
     fn test_different_passwords() {
         let data = "data";
-        let encryption1 = Encryption::new("password1");
-        let encryption2 = Encryption::new("password2");
+        let salt = create_test_salt();
+        let encryption1 = Encryption::new("password1", &salt);
+        let encryption2 = Encryption::new("password2", &salt);
+
+        let encrypted_data = encryption1.encrypt(data).unwrap();
+        let result = encryption2.decrypt(&encrypted_data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_same_password_different_salt() {
+        let data = "data";
+        let password = "password";
+        let salt1 = create_test_salt();
+        let salt2 = create_test_salt();
+
+        let encryption1 = Encryption::new(password, &salt1);
+        let encryption2 = Encryption::new(password, &salt2);
 
         let encrypted_data = encryption1.encrypt(data).unwrap();
         let result = encryption2.decrypt(&encrypted_data);

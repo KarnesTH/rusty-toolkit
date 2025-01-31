@@ -47,7 +47,7 @@ pub enum PasswordManagerCommands {
         #[arg(short, long)]
         password: Option<String>,
         /// The URL for the service.
-        #[arg(short, long)]
+        #[arg(long)]
         url: Option<String>,
         /// Additional notes about the password.
         #[arg(short, long)]
@@ -57,7 +57,7 @@ pub enum PasswordManagerCommands {
     Remove {
         /// The name of the password to remove.
         #[arg(short, long)]
-        name: String,
+        id: Option<i32>,
     },
     /// List all passwords in the password manager.
     List,
