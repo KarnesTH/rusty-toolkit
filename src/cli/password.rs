@@ -461,6 +461,44 @@ impl PasswordManager {
 
         Ok(())
     }
+
+    /// Search for a password in the password manager.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - The query to search for.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the password cannot be found.
+    pub fn search_password(&self, query: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+        let query = if let Some(query) = query {
+            query
+        } else {
+            Text::new("Please enter the query to search for:").prompt()?
+        };
+
+        let passwords = self.database.search(&query)?;
+
+        if passwords.is_empty() {
+            println!("No passwords found.");
+            return Ok(());
+        }
+
+        println!("ID\tService\tUsername\tURL\tNotes");
+        for password in passwords {
+            println!(
+                "{:#?}\t{}\t{}\t{}\t{}",
+                password.id, password.service, password.username, password.url, password.notes
+            );
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

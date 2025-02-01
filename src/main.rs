@@ -36,16 +36,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         url,
                         notes,
                     } => {
+                        info!("Adding a new password");
                         pw.add_password(service, username, password, url, notes)?;
 
                         println!("New Password added.");
                     }
                     PasswordManagerCommands::Remove { id } => {
+                        info!("Removing a Password");
                         pw.remove_password(id)?;
 
                         println!("Password removed.");
                     }
                     PasswordManagerCommands::List => {
+                        info!("Listing all Passwords");
                         pw.list_passwords()?;
                     }
                     PasswordManagerCommands::Update {
@@ -56,12 +59,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         url,
                         notes,
                     } => {
+                        info!("Updating a Password");
                         pw.update_password(id, service, username, password, url, notes)?;
 
                         println!("Password updated.");
                     }
                     PasswordManagerCommands::Show { id } => {
+                        info!("Showing a Password");
                         pw.show_password(id)?;
+                    }
+                    PasswordManagerCommands::Search { query } => {
+                        info!("Searching for a Password");
+                        pw.search_password(query)?;
                     }
                 }
             }

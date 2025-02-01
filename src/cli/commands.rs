@@ -82,8 +82,14 @@ pub enum PasswordManagerCommands {
         #[arg(short, long)]
         notes: Option<String>,
     },
+    /// Show a password in the password manager.
     Show {
         #[arg(short, long)]
         id: Option<i32>,
+    },
+    /// Search for a password in the password manager.
+    Search {
+        #[arg(short, long)]
+        query: Option<String>,
     },
 }
