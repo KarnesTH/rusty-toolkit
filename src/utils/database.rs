@@ -151,6 +151,51 @@ impl Database {
         Ok(result)
     }
 
+    /// Read a single PasswordEntry from the database.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The id of the PasswordEntry to read.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the PasswordEntry or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the PasswordEntry cannot be read.
+    pub fn read_by_id(&self, id: i32) -> Result<PasswordEntry, Box<dyn std::error::Error>> {
+        let mut stmt = self.connection.prepare(
+            "SELECT id, service, username, password, url, notes, created_at, updated_at
+            FROM passwords
+            WHERE id = ?1",
+        )?;
+
+        let entry = stmt.query_map(params![id], |row| {
+            let encoded_password: String = row.get(3)?;
+            let d_password = STANDARD.decode(encoded_password).unwrap();
+            let password = self.encryption.decrypt(&d_password).unwrap();
+
+            Ok(PasswordEntry {
+                id: row.get(0)?,
+                service: row.get(1)?,
+                username: row.get(2)?,
+                password,
+                url: row.get(4)?,
+                notes: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })?;
+
+        let mut result = Vec::new();
+        for entry in entry {
+            result.push(entry?);
+        }
+
+        Ok(result[0].clone())
+    }
+
     /// Update a PasswordEntry in the database.
     ///
     /// # Arguments
@@ -164,7 +209,7 @@ impl Database {
     /// # Errors
     ///
     /// An error will be returned if the PasswordEntry cannot be updated.
-    pub fn update(&self, entry: PasswordEntry) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn update(&self, id: i32, entry: PasswordEntry) -> Result<(), Box<dyn std::error::Error>> {
         let encrypted_password = self.encryption.encrypt(&entry.password).unwrap();
         let encoded_password = STANDARD.encode(encrypted_password);
 
@@ -179,7 +224,7 @@ impl Database {
                 entry.url,
                 entry.notes,
                 Utc::now().to_rfc3339(),
-                entry.id,
+                id,
             ],
         )?;
         Ok(())
@@ -328,12 +373,18 @@ mod tests {
         let entries = db.read().unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].service, entry.service);
-        assert_eq!(entries[0].password, entry.password); // Verify decryption works
+        assert_eq!(entries[0].password, entry.password);
+
+        // Test Read by ID
+        let id = entries[0].id.unwrap();
+        let entry = db.read_by_id(id).unwrap();
+        assert_eq!(entry.service, "test_service");
 
         // Test Update
         let mut updated_entry = entries[0].clone();
         updated_entry.service = "updated_service".to_string();
-        db.update(updated_entry).unwrap();
+        let id = updated_entry.id.unwrap();
+        db.update(id, updated_entry).unwrap();
 
         let updated_entries = db.read().unwrap();
         assert_eq!(updated_entries[0].service, "updated_service");

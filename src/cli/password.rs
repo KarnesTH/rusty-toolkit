@@ -368,6 +368,99 @@ impl PasswordManager {
         self.database.delete(id)?;
         Ok(())
     }
+
+    /// Update a password in the password manager.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the password to update.
+    /// * `service` - The name of the service the password is for.
+    /// * `username` - The name of the password to add.
+    /// * `password` - The password to add.
+    /// * `url` - The URL for the service.
+    /// * `notes` - Additional notes about the password.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the password cannot be updated.
+    pub fn update_password(
+        &self,
+        id: Option<i32>,
+        service: Option<String>,
+        username: Option<String>,
+        password: Option<String>,
+        url: Option<String>,
+        notes: Option<String>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let id = if let Some(id) = id {
+            id
+        } else {
+            let id = Text::new("Please enter the ID of the password to update:").prompt()?;
+            if let Ok(id) = id.parse::<i32>() {
+                id
+            } else {
+                return Err("Invalid ID".into());
+            }
+        };
+
+        let input_data = Self::get_user_data(service, username, password, url, notes)?;
+
+        let entry = PasswordEntry::new(
+            input_data["service"].clone(),
+            input_data["username"].clone(),
+            input_data["password"].clone(),
+            input_data["url"].clone(),
+            input_data["notes"].clone(),
+        )?;
+
+        self.database.update(id, entry)?;
+
+        Ok(())
+    }
+
+    /// Show a password from the password manager.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the password to show.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the password cannot be shown.
+    pub fn show_password(&self, id: Option<i32>) -> Result<(), Box<dyn std::error::Error>> {
+        let id = if let Some(id) = id {
+            id
+        } else {
+            let id = Text::new("Please enter the ID of the password to show:").prompt()?;
+            if let Ok(id) = id.parse::<i32>() {
+                id
+            } else {
+                return Err("Invalid ID".into());
+            }
+        };
+
+        let password = self.database.read_by_id(id)?;
+
+        println!(
+            "ID: {:#?}\nService: {}\nUsername: {}\nPassword: {}\nURL: {}\nNotes: {}",
+            password.id,
+            password.service,
+            password.username,
+            password.password,
+            password.url,
+            password.notes
+        );
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

@@ -61,4 +61,29 @@ pub enum PasswordManagerCommands {
     },
     /// List all passwords in the password manager.
     List,
+    /// Update a password in the password manager.
+    Update {
+        /// The name of the password to update.
+        #[arg(short, long)]
+        id: Option<i32>,
+        /// The name of the service the password is for.
+        #[arg(short, long)]
+        service: Option<String>,
+        /// The name of the password to add.
+        #[arg(short, long)]
+        username: Option<String>,
+        /// The password to add.
+        #[arg(short, long)]
+        password: Option<String>,
+        /// The URL for the service.
+        #[arg(long)]
+        url: Option<String>,
+        /// Additional notes about the password.
+        #[arg(short, long)]
+        notes: Option<String>,
+    },
+    Show {
+        #[arg(short, long)]
+        id: Option<i32>,
+    },
 }

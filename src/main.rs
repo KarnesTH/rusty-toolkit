@@ -48,6 +48,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     PasswordManagerCommands::List => {
                         pw.list_passwords()?;
                     }
+                    PasswordManagerCommands::Update {
+                        id,
+                        service,
+                        username,
+                        password,
+                        url,
+                        notes,
+                    } => {
+                        pw.update_password(id, service, username, password, url, notes)?;
+
+                        println!("Password updated.");
+                    }
+                    PasswordManagerCommands::Show { id } => {
+                        pw.show_password(id)?;
+                    }
                 }
             }
         },
