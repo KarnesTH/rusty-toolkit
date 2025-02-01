@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
+use csv::Writer;
 use inquire::{validator::Validation, Confirm, Password, Text};
 use log::info;
 use ring::rand::{SecureRandom, SystemRandom};
+use serde::Serialize;
 
 use crate::prelude::{Config, Database, Encryption, PasswordEntry};
 
@@ -11,6 +13,17 @@ pub struct PasswordManager {
     pub length: usize,
     pub database: Database,
     pub encryption: Encryption,
+}
+
+#[derive(Serialize, Debug)]
+struct PasswordExport {
+    service: String,
+    username: String,
+    password: String,
+    url: String,
+    notes: String,
+    created_at: String,
+    updated_at: String,
 }
 
 impl PasswordManager {
@@ -496,6 +509,60 @@ impl PasswordManager {
                 password.id, password.service, password.username, password.url, password.notes
             );
         }
+
+        Ok(())
+    }
+
+    /// Export all passwords to a CSV file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to export the passwords to.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the passwords cannot be exported.
+    pub fn export_passwords(&self, path: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+        let path = if let Some(path) = path {
+            path
+        } else {
+            Text::new("Please enter the path to export the passwords to:").prompt()?
+        };
+
+        let passwords = self.database.read()?;
+        let mut writer = Writer::from_path(path.clone())?;
+
+        writer.write_record(&[
+            "Service",
+            "Username",
+            "Password",
+            "URL",
+            "Notes",
+            "Created At",
+            "Updated At",
+        ])?;
+
+        for password in passwords {
+            let export = PasswordExport {
+                service: password.service,
+                username: password.username,
+                password: password.password,
+                url: password.url,
+                notes: password.notes,
+                created_at: password.created_at.to_string(),
+                updated_at: password.updated_at.to_string(),
+            };
+
+            writer.serialize(export)?;
+        }
+
+        writer.flush()?;
+
+        println!("Passwords successfully exported to: {}", path);
 
         Ok(())
     }

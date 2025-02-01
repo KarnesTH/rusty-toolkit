@@ -72,6 +72,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         info!("Searching for a Password");
                         pw.search_password(query)?;
                     }
+                    PasswordManagerCommands::Export { path } => {
+                        info!("Exporting Passwords");
+                        pw.export_passwords(path)?;
+                    }
                 }
             }
         },

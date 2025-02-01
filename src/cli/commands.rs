@@ -84,12 +84,20 @@ pub enum PasswordManagerCommands {
     },
     /// Show a password in the password manager.
     Show {
+        /// The ID of the password to show.
         #[arg(short, long)]
         id: Option<i32>,
     },
     /// Search for a password in the password manager.
     Search {
+        /// The query to search for.
         #[arg(short, long)]
         query: Option<String>,
+    },
+    /// Export the password manager to a file.
+    Export {
+        /// The path to export the password manager to.
+        #[arg(short, long)]
+        path: Option<String>,
     },
 }
