@@ -76,6 +76,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         info!("Exporting Passwords");
                         pw.export_passwords(path)?;
                     }
+                    PasswordManagerCommands::Import { path } => {
+                        info!("Importing Passwords");
+                        pw.import_passwords(path)?;
+                    }
+                    PasswordManagerCommands::GenerateImportTemplate { path } => {
+                        info!("Generating Import Template");
+                        pw.generate_import_template(path)?;
+                    }
                 }
             }
         },

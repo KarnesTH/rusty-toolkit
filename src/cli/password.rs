@@ -618,6 +618,63 @@ impl PasswordManager {
         println!("Passwords successfully imported from: {}", path);
         Ok(())
     }
+
+    /// Generate an import template for passwords.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to generate the import template.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the import template cannot be generated.
+    pub fn generate_import_template(
+        &self,
+        path: Option<String>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let path = if let Some(path) = path {
+            path
+        } else {
+            Text::new("Please enter the path to generate the import template:").prompt()?
+        };
+
+        let mut writer = Writer::from_path(&path)?;
+
+        writer.write_record(&[
+            "Service",
+            "Username",
+            "Password",
+            "URL",
+            "Notes",
+            "Created At",
+            "Updated At",
+        ])?;
+
+        let entries = vec![PasswordExportImport {
+            service: "Google".to_string(),
+            username: "username@gmail.com".to_string(),
+            password: "secure_password".to_string(),
+            url: "https://google.com/gemail".to_string(),
+            notes: "Notes".to_string(),
+            created_at: "".to_string(),
+            updated_at: "".to_string(),
+        }];
+
+        entries.iter().for_each(|entry| {
+            writer.serialize(entry).unwrap();
+        });
+
+        writer.flush()?;
+
+        println!("Import template successfully generated at: {}", path);
+        println!("Please Note: The 'Created At' and 'Updated At' fields are optional. You can leave them empty.");
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

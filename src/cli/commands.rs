@@ -100,4 +100,16 @@ pub enum PasswordManagerCommands {
         #[arg(short, long)]
         path: Option<String>,
     },
+    /// Import passwords from a file.
+    Import {
+        /// The path to import passwords from.
+        #[arg(short, long)]
+        path: Option<String>,
+    },
+    /// Generate a import template.
+    GenerateImportTemplate {
+        /// The path to save the import template to.
+        #[arg(short, long)]
+        path: Option<String>,
+    },
 }
