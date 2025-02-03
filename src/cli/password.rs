@@ -587,28 +587,35 @@ impl PasswordManager {
             Text::new("Please enter the path to import the passwords from:").prompt()?
         };
 
-        let mut reader = csv::Reader::from_path(path.clone())?;
-        let mut entries = Vec::new();
-
-        for result in reader.deserialize() {
-            let record: PasswordExportImport = result?;
-            let entry = PasswordEntry::new(
-                record.service,
-                record.username,
-                record.password,
-                record.url,
-                record.notes,
-            )?;
-
-            entries.push(entry);
-        }
+        let mut reader = csv::Reader::from_path(&path)?;
+        let entries: Vec<PasswordEntry> = reader
+            .deserialize()
+            .filter_map(|result| match result {
+                Ok(record) => {
+                    let record: PasswordExportImport = record;
+                    PasswordEntry::new(
+                        record.service,
+                        record.username,
+                        record.password,
+                        record.url,
+                        record.notes,
+                    )
+                    .ok()
+                }
+                Err(e) => {
+                    eprintln!("Warning: Skipping invalid entry: {}", e);
+                    None
+                }
+            })
+            .collect();
 
         for entry in entries {
-            self.database.create(&entry)?;
+            if let Err(e) = self.database.create(&entry) {
+                eprintln!("Warning: Failed to import entry: {}", e);
+            }
         }
 
         println!("Passwords successfully imported from: {}", path);
-
         Ok(())
     }
 }
