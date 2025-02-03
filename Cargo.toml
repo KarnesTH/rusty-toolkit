@@ -2,6 +2,8 @@
 name = "rusty-toolkit"
 version = "0.1.0"
 edition = "2021"
+authors = ["KarnesTH", "Karnes Development"]
+description = "A modular CLI utility suite written in Rust for file management, password tools, downloads, and system monitoring."
 
 [dependencies]
 base64 = "0.22.1"

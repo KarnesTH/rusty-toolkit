@@ -4,7 +4,7 @@ use csv::Writer;
 use inquire::{validator::Validation, Confirm, Password, Text};
 use log::info;
 use ring::rand::{SecureRandom, SystemRandom};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::prelude::{Config, Database, Encryption, PasswordEntry};
 
@@ -15,8 +15,8 @@ pub struct PasswordManager {
     pub encryption: Encryption,
 }
 
-#[derive(Serialize, Debug)]
-struct PasswordExport {
+#[derive(Serialize, Deserialize, Debug)]
+struct PasswordExportImport {
     service: String,
     username: String,
     password: String,
@@ -547,7 +547,7 @@ impl PasswordManager {
         ])?;
 
         for password in passwords {
-            let export = PasswordExport {
+            let export = PasswordExportImport {
                 service: password.service,
                 username: password.username,
                 password: password.password,
@@ -563,6 +563,51 @@ impl PasswordManager {
         writer.flush()?;
 
         println!("Passwords successfully exported to: {}", path);
+
+        Ok(())
+    }
+
+    /// Import passwords from a CSV file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to import the passwords from.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `()` or an error.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the passwords cannot be imported.
+    pub fn import_passwords(&self, path: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+        let path = if let Some(path) = path {
+            path
+        } else {
+            Text::new("Please enter the path to import the passwords from:").prompt()?
+        };
+
+        let mut reader = csv::Reader::from_path(path.clone())?;
+        let mut entries = Vec::new();
+
+        for result in reader.deserialize() {
+            let record: PasswordExportImport = result?;
+            let entry = PasswordEntry::new(
+                record.service,
+                record.username,
+                record.password,
+                record.url,
+                record.notes,
+            )?;
+
+            entries.push(entry);
+        }
+
+        for entry in entries {
+            self.database.create(&entry)?;
+        }
+
+        println!("Passwords successfully imported from: {}", path);
 
         Ok(())
     }
